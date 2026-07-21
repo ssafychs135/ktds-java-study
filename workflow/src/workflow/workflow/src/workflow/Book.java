@@ -1,3 +1,5 @@
+package workflow;
+
 /**
  * 도서(Book) 클래스
  * - "사랑스러운 강아지" 페이지의 도서 정보를 필수 항목만 남겨 표현한다.
@@ -10,7 +12,7 @@ public class Book {
     public String title;
 
     /** 저자 */
-    public String author;
+    public Author author;
 
     /** 출판사 */
     public String publisher;
@@ -18,10 +20,13 @@ public class Book {
     /** 가격 */
     public int price;
 
-    public Book() {
-    }
+    /** 리뷰 */
+    public Review[] reviews;
 
-    public Book(String title, String author, String publisher, int price) {
+    
+
+
+    public Book(String title, Author author, String publisher, int price, Review[] reviews) {
         this.title = title;
         this.author = author;
         this.publisher = publisher;
