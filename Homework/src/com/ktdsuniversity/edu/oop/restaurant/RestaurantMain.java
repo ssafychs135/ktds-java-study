@@ -1,7 +1,10 @@
 package com.ktdsuniversity.edu.oop.restaurant;
 
 public class RestaurantMain {
-
+	
+	
+	
+	
 	public static void main(String[] args) {
 
 		Restaurant restaurant = new Restaurant("웰빙 무한 레스토랑");
