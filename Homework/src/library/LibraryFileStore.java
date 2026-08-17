@@ -5,10 +5,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -25,8 +22,7 @@ public class LibraryFileStore {
 	private static final Path DISPOSED_FILE = Path.of(DATA_DIR + "disposed_books.csv");
 	private static final Path MEMBERS_FILE = Path.of(DATA_DIR + "members.csv");
 
-	private static final String BOOK_HEADER = "#관리번호,ISBN,도서명,부제,장르,출판사,저자,출판일,인쇄회차,입고일,가격,총대여횟수,대여상태,대여일,반납완료상태,반납일,대여회원명";
-	private static final String MEMBER_HEADER = "#회원명,연락처,벌금,초과횟수,대여도서관리번호목록";
+	// 파일에는 데이터만 담는다. 칸 순서는 README.md에 적어 두었다.
 
 	// 객체를 만들 필요가 없는 유틸리티 클래스이므로 생성자를 막아둔다.
 	private LibraryFileStore() {
@@ -35,26 +31,41 @@ public class LibraryFileStore {
 	/**
 	 * 세 파일을 읽어 도서관을 구성한다.
 	 *
-	 * 회원의 대여 목록은 관리번호로만 저장되어 있으므로,
-	 * 도서와 폐기 도서를 모두 합친 표에서 찾아 실제 객체 참조로 되돌린다.
+	 * 회원의 대여 목록은 파일에 저장하지 않는다. 대신 도서의 "대여회원명"을 보고
+	 * 대여 중인 도서를 회원에게 되돌려 붙인다. 폐기 도서도 회원이 들고 있을 수 있으므로
+	 * 두 목록을 합쳐서 살펴본다.
 	 */
 	public static Library load() {
 
 		Library library = new Library();
 
-		List<Book> books = readLines(BOOKS_FILE).map(Book::parse).toList();
-		List<Book> disposedBooks = readLines(DISPOSED_FILE).map(Book::parse).toList();
+		List<Book> books = readLines(BOOKS_FILE) // Stream<String>
+				.map(Book::parse) //               Stream<Book>
+				.toList(); //                      List<Book>
+
+		List<Book> disposedBooks = readLines(DISPOSED_FILE) // Stream<String>
+				.map(Book::parse) //                          Stream<Book>
+				.toList(); //                                 List<Book>
 
 		books.forEach(library::addLoadedBook);
 		disposedBooks.forEach(library::addLoadedDisposedBook);
 
-		// 관리번호 -> 도서. 폐기 도서까지 넣어야 회원의 대여 목록을 복원할 수 있다.
-		Map<String, Book> bookByNo = Stream.concat(books.stream(), disposedBooks.stream())
-				.collect(Collectors.toMap(Book::getManagementNo, book -> book));
+		List<Member> members = readLines(MEMBERS_FILE) // Stream<String>
+				.map(Member::parse) //                   Stream<Member>
+				.toList(); //                            List<Member>
 
-		readLines(MEMBERS_FILE)
-				.map(line -> Member.parse(line, bookByNo))
-				.forEach(library::addMember);
+		members.forEach(library::addMember);
+
+		// 대여 관계를 되살린다. 회원마다 자기 이름으로 대여된 도서를 찾아 목록에 넣는다.
+		List<Book> allBooks = Stream.concat(books.stream(), disposedBooks.stream()) // Stream<Book>
+				.toList(); //                                                         List<Book>
+
+		for (Member member : members) {
+			allBooks.stream() // Stream<Book>
+					.filter(book -> book.isRented()
+							&& book.getRenterName().equals(member.getName())) // Stream<Book>
+					.forEach(member::addRentedBook);
+		}
 
 		return library;
 	}
@@ -63,9 +74,10 @@ public class LibraryFileStore {
 	 * 도서관 정보를 세 파일에 모두 저장한다. 데이터가 바뀔 때마다 호출한다.
 	 */
 	public static void save(Library library) {
-		writeLines(BOOKS_FILE, BOOK_HEADER, library.getBooks().stream().map(Book::toCsv).toList());
-		writeLines(DISPOSED_FILE, BOOK_HEADER, library.getDisposedBooks().stream().map(Book::toCsv).toList());
-		writeLines(MEMBERS_FILE, MEMBER_HEADER, library.getMembers().stream().map(Member::toCsv).toList());
+		// 세 줄 모두 Stream<Book 또는 Member> -> map -> Stream<String>(CSV 한 줄) -> List<String>
+		writeLines(BOOKS_FILE, library.getBooks().stream().map(Book::toCsv).toList());
+		writeLines(DISPOSED_FILE, library.getDisposedBooks().stream().map(Book::toCsv).toList());
+		writeLines(MEMBERS_FILE, library.getMembers().stream().map(Member::toCsv).toList());
 	}
 
 	/**
@@ -79,22 +91,16 @@ public class LibraryFileStore {
 
 		try {
 			// 파일을 닫기 위해 목록으로 받은 뒤 다시 스트림으로 만든다.
-			return Files.readAllLines(path, StandardCharsets.UTF_8).stream()
-					.filter(line -> !line.isBlank())
-					.filter(line -> !line.startsWith("#")); // 머리글 줄은 건너뛴다
+			return Files.readAllLines(path, StandardCharsets.UTF_8).stream() // Stream<String>
+					.filter(line -> !line.isBlank()); //                       Stream<String>  빈 줄 제외
 		} catch (IOException exception) {
 			throw new UncheckedIOException("파일을 읽을 수 없습니다 : " + path, exception);
 		}
 	}
 
-	private static void writeLines(Path path, String header, List<String> lines) {
-
-		List<String> output = new ArrayList<>();
-		output.add(header);
-		output.addAll(lines);
-
+	private static void writeLines(Path path, List<String> lines) {
 		try {
-			Files.write(path, output, StandardCharsets.UTF_8);
+			Files.write(path, lines, StandardCharsets.UTF_8);
 		} catch (IOException exception) {
 			throw new UncheckedIOException("파일을 저장할 수 없습니다 : " + path, exception);
 		}

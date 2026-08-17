@@ -3,7 +3,6 @@ package library;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 도서관 회원.
@@ -83,11 +82,11 @@ public class Member {
 	 *
 	 * @return 못 찾으면 null
 	 */
-	public Book findRentedBook(String managementNo) {
-		return this.rentedBooks.stream()
-				.filter(book -> book.getManagementNo().equals(managementNo))
-				.findFirst()
-				.orElse(null);
+	public Book findRentedBook(int managementNo) {
+		return this.rentedBooks.stream() //                            Stream<Book>
+				.filter(book -> book.getManagementNo() == managementNo) //     Stream<Book>
+				.findFirst() //                                                Optional<Book>
+				.orElse(null); //                                              Book 또는 null
 	}
 
 	// ------------------------------------------------------------------
@@ -112,44 +111,27 @@ public class Member {
 
 	/**
 	 * CSV 한 줄로 만든다.
-	 * 대여 도서는 관리번호만 세미콜론으로 이어 붙인다. (쉼표는 필드 구분자라 쓸 수 없다)
+	 *
+	 * 대여 목록은 저장하지 않는다. "누가 빌렸는가"는 Book의 대여회원명에만 적고,
+	 * 회원의 대여 목록은 파일을 읽을 때 그것으로부터 되살린다.
+	 * 같은 사실을 두 곳에 적으면 서로 어긋날 수 있기 때문이다.
 	 */
 	public String toCsv() {
-		String rentedBookNos = this.rentedBooks.stream()
-				.map(Book::getManagementNo)
-				.reduce((joined, managementNo) -> joined + ";" + managementNo)
-				.orElse("");
-
 		return String.join(",", this.name, this.phone, String.valueOf(this.fine),
-				String.valueOf(this.overdueCount), rentedBookNos);
+				String.valueOf(this.overdueCount));
 	}
 
 	/**
-	 * CSV 한 줄을 회원으로 되돌린다.
-	 *
-	 * @param bookByNo 관리번호로 도서를 찾기 위한 표. 폐기 도서까지 포함해야 한다.
+	 * CSV 한 줄을 회원으로 되돌린다. 대여 목록은 비어 있는 상태로 만들어진다.
 	 */
-	public static Member parse(String line, Map<String, Book> bookByNo) {
+	public static Member parse(String line) {
 		String[] columns = line.split(",", -1);
 
-		Member member = new Member(
+		return new Member(
 				columns[0],
 				columns[1],
 				Integer.parseInt(columns[2]),
 				Integer.parseInt(columns[3]));
-
-		// 관리번호 목록을 실제 Book 객체 참조로 되돌린다.
-		String rentedBookNos = columns[4];
-		if (!rentedBookNos.isBlank()) {
-			for (String managementNo : rentedBookNos.split(";")) {
-				Book book = bookByNo.get(managementNo.trim());
-				if (book != null) {
-					member.addRentedBook(book);
-				}
-			}
-		}
-
-		return member;
 	}
 
 	// ------------------------------------------------------------------
@@ -178,7 +160,7 @@ public class Member {
 			} else {
 				state = "대여중 (예정일 " + book.getDueDate() + ")";
 			}
-			summary.append(String.format("%n     - [%s] %s : %s", book.getManagementNo(), book.getTitle(), state));
+			summary.append(String.format("%n     - [%04d] %s : %s", book.getManagementNo(), book.getTitle(), state));
 		}
 
 		return summary.toString();

@@ -153,7 +153,7 @@ public class LibraryMain {
 
 		LibraryView.printRentedBooksOf(member, library.getDisposedBooks());
 
-		int charged = library.returnBook(memberName, InputUtil.nextText("반납할 도서의 관리번호 : "), today);
+		int charged = library.returnBook(memberName, InputUtil.nextInt("반납할 도서의 관리번호 : "), today);
 
 		LibraryFileStore.save(library);
 		LibraryView.printReturnResult(charged, member);

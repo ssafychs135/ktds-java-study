@@ -70,7 +70,7 @@ public class LibraryView {
 	// ------------------------------------------------------------------
 
 	public static void printAddedBook(Book book) {
-		System.out.println("입고 완료. 관리 고유번호는 " + book.getManagementNo() + " 입니다.");
+		System.out.printf("입고 완료. 관리 고유번호는 %04d 입니다.%n", book.getManagementNo());
 	}
 
 	public static void printDisposedBooks(List<Book> disposed) {
@@ -112,12 +112,12 @@ public class LibraryView {
 		System.out.println("대여 중인 도서 :");
 		for (Book book : member.getRentedBooks()) {
 			String state = disposedBooks.contains(book) ? " (폐기됨)" : " (반납예정 " + book.getDueDate() + ")";
-			System.out.println("  [" + book.getManagementNo() + "] " + book.getTitle() + state);
+			System.out.printf("  [%04d] %s%s%n", book.getManagementNo(), book.getTitle(), state);
 		}
 	}
 
 	public static void printRentResult(Book book) {
-		System.out.println("대여 완료 : [" + book.getManagementNo() + "] " + book.getTitle());
+		System.out.printf("대여 완료 : [%04d] %s%n", book.getManagementNo(), book.getTitle());
 		System.out.println("반납 예정일은 " + book.getDueDate() + " 입니다.");
 	}
 

@@ -21,7 +21,7 @@ public class Book {
 	public static final int DISPOSAL_YEARS = 10;
 
 	// 도서 자체의 정보. 입고 후에는 바뀌지 않는다.
-	private final String managementNo; // 관리 고유번호 (도서관이 부여, 중복 불가)
+	private final int managementNo; // 관리 고유번호 (도서관이 부여, 중복 불가). 순번이므로 정수로 다룬다
 	private final String isbn; // 책 고유번호 (같은 책이면 동일)
 	private final String title; // 도서명
 	private final String subtitle; // 도서 부제
@@ -44,7 +44,7 @@ public class Book {
 	/**
 	 * 신규 입고용 생성자. 도서 자체의 정보만 받는다.
 	 */
-	public Book(String managementNo, String isbn, String title, String subtitle, String genre, String publisher,
+	public Book(int managementNo, String isbn, String title, String subtitle, String genre, String publisher,
 			String author, LocalDate publishDate, int printCount, LocalDate stockDate, int price) {
 		this.managementNo = managementNo;
 		this.isbn = isbn;
@@ -63,7 +63,7 @@ public class Book {
 	 * 파일에서 읽어올 때 쓰는 생성자.
 	 * 도서 정보는 위 생성자에 맡기고, 대여 정보만 이어서 채운다.
 	 */
-	public Book(String managementNo, String isbn, String title, String subtitle, String genre, String publisher,
+	public Book(int managementNo, String isbn, String title, String subtitle, String genre, String publisher,
 			String author, LocalDate publishDate, int printCount, LocalDate stockDate, int price, int rentalCount,
 			boolean rented, LocalDate rentalDate, boolean returned, LocalDate returnDate, String renterName) {
 
@@ -168,7 +168,7 @@ public class Book {
 	/** CSV 한 줄로 만든다. */
 	public String toCsv() {
 		return String.join(",",
-				this.managementNo,
+				String.format("%04d", this.managementNo),
 				this.isbn,
 				this.title,
 				this.subtitle,
@@ -193,7 +193,7 @@ public class Book {
 		String[] columns = line.split(",", -1);
 
 		return new Book(
-				columns[0],
+				Integer.parseInt(columns[0]),
 				columns[1],
 				columns[2],
 				columns[3],
@@ -229,7 +229,7 @@ public class Book {
 	/** 목록에 한 줄로 출력할 때 쓴다. */
 	public String toSummary() {
 		String state = this.rented ? "대여중(" + this.renterName + ")" : "대여가능";
-		return String.format("[%s] %s - %s / %s / %s / %s / 대여 %d회 / %s",
+		return String.format("[%04d] %s - %s / %s / %s / %s / 대여 %d회 / %s",
 				this.managementNo, this.title, this.subtitle, this.genre, this.author, this.publisher,
 				this.rentalCount, state);
 	}
@@ -245,7 +245,7 @@ public class Book {
 	// getter
 	// ------------------------------------------------------------------
 
-	public String getManagementNo() {
+	public int getManagementNo() {
 		return this.managementNo;
 	}
 

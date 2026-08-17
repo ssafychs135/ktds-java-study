@@ -13,10 +13,10 @@ library/
 ├── LibraryView.java          화면 출력 전담                       133줄
 ├── InputUtil.java            터미널 입력 전담                      64줄
 │
-├── Library.java              도서관. 업무 규칙 9개                 260줄
+├── Library.java              도서관. 업무 규칙 9개                 257줄
 ├── Book.java                 도서                                 284줄
-├── Member.java               회원                                 208줄
-├── LibraryFileStore.java     CSV 읽기/쓰기                        103줄
+├── Member.java               회원                                 190줄
+├── LibraryFileStore.java     CSV 읽기/쓰기                        109줄
 ├── LibraryException.java     업무 규칙 위반 예외                    17줄
 │
 ├── books.csv                 도서 목록
@@ -98,7 +98,7 @@ Library ──has-a──> List<Book>     도서 목록
 | 메서드 | 규칙 |
 |---|---|
 | `addBook(...)` | 신규 입고. 관리번호를 `기존 최대값 + 1` 로 자동 부여 |
-| `nextManagementNo()` | `B0001` 형식의 다음 번호 생성. 폐기 도서 번호까지 살펴 재사용을 막는다 |
+| `nextManagementNo()` | 기존 최대 번호 + 1. 폐기 도서 번호까지 살펴 재사용을 막는다 |
 | `disposeOldBooks(today)` | 출판 후 햇수로 10년 지난 도서를 폐기. 대여 중이면 `disposedBooks` 로 옮긴다 |
 | `findDueOrOverdueMembers(today)` | 반납기간 도래·초과 회원. 폐기 도서는 판단에서 제외하므로 **폐기 도서만 빌린 회원은 조회되지 않는다** |
 | `findPopularBooks(limit)` | 총 대여횟수 내림차순 상위 N권 |
@@ -134,7 +134,7 @@ Library ──has-a──> List<Book>     도서 목록
 | `addRentedBook()` / `removeRentedBook()` | 대여 목록에 추가·제거 |
 | `findRentedBook(managementNo)` | 대여 중인 도서를 관리번호로 찾는다. 없으면 `null` |
 | `chargeOverdue(overdueDays)` | 벌금을 누적하고 초과 횟수를 1 올린다. 부과액 반환 |
-| `toCsv()` / `parse(line, bookByNo)` | CSV 변환. 대여 도서는 관리번호를 `;` 로 이어 붙이고, 읽을 때 `bookByNo` 로 객체 참조를 복원한다 |
+| `toCsv()` / `parse(line)` | CSV 변환. **대여 목록은 저장하지 않는다** — 아래 "정규화" 참고 |
 | `toSummary()` | 목록용 한 줄 |
 | `toOverdueSummary(today, disposedBooks)` | 대여 중인 각 도서의 상태(연체/도래/폐기됨)를 함께 보여준다 |
 
@@ -142,10 +142,10 @@ Library ──has-a──> List<Book>     도서 목록
 
 | 메서드 | 하는 일 |
 |---|---|
-| `load()` | 세 파일을 읽어 도서관을 구성한다. 회원의 대여 목록은 관리번호로만 저장돼 있으므로, **도서 + 폐기 도서를 합친 표**에서 찾아 객체 참조로 되돌린다 |
+| `load()` | 세 파일을 읽어 도서관을 구성한다. 대여 관계는 저장돼 있지 않으므로, **도서의 `대여회원명` 을 보고** 회원에게 되돌려 붙인다 |
 | `save(library)` | 세 파일에 모두 저장한다. 데이터가 바뀔 때마다 호출 |
-| `readLines(path)` | 파일을 읽어 빈 줄과 `#` 머리글을 걸러낸다. 파일이 없으면 빈 스트림 |
-| `writeLines(path, header, lines)` | 머리글을 붙여 UTF-8로 저장한다 |
+| `readLines(path)` | 파일을 읽어 빈 줄을 걸러낸다. 파일이 없으면 빈 스트림 |
+| `writeLines(path, lines)` | UTF-8로 저장한다 |
 
 ### LibraryView / InputUtil — View
 
@@ -169,7 +169,8 @@ Library ──has-a──> List<Book>     도서 목록
 | 반납 도래·초과 회원 | `filter(m -> m.getRentedBooks().stream().anyMatch(...))` — 중첩 Stream |
 | 인기·비인기 도서 | `sorted(Comparator.comparingInt(Book::getRentalCount))` → `limit(n)` |
 | 상습 미반납 회원 | `filter(Member::isHabitualOverdue)` |
-| 관리번호 최대값 | `Stream.concat(...)` → `mapToInt` → `max()` |
+| 관리번호 최대값 | `Stream.concat(...)` → `mapToInt(Book::getManagementNo)` → `max()` |
+| 대여 관계 복원 | `Stream.concat(...)` → `filter(대여중 && 회원명 일치)` |
 | CSV 읽기 | `readAllLines().stream()` → `filter` → `map(Book::parse)` → `toList()` |
 | CSV 쓰기 | `stream().map(Book::toCsv).toList()` |
 
@@ -178,7 +179,7 @@ Library ──has-a──> List<Book>     도서 목록
 `distinct()` 는 `equals()` 기준이라 "ISBN만 같으면 같은 책"이라는 규칙을 표현할 수 없다. 그래서 ISBN을 키로 모으는 방식을 썼다.
 
 ```java
-Collectors.toMap(Book::getIsbn, book -> book, (first, second) -> first, LinkedHashMap::new)
+Collectors.toMap(Book::getIsbn, book -> book, (existing, duplicate) -> existing, LinkedHashMap::new)
 ```
 
 키가 겹치면 **먼저 온 책을 유지**하고, `LinkedHashMap` 으로 입력 순서를 지킨다.
@@ -197,18 +198,45 @@ Collectors.toMap(Book::getIsbn, book -> book, (first, second) -> first, LinkedHa
 
 ### books.csv / disposed_books.csv
 
+머리글 줄 없이 데이터만 담는다. 칸 순서는 아래와 같다.
+
 ```
 관리번호,ISBN,도서명,부제,장르,출판사,저자,출판일,인쇄회차,입고일,가격,총대여횟수,대여상태,대여일,반납완료상태,반납일,대여회원명
+0004,9788956746425,자바의 정석,기초편,IT,도우출판,남궁성,2020-06-01,3,2020-07-01,30000,12,false,,true,2026-07-20,
 ```
+
+첫 줄은 설명용이며 실제 파일에는 없다.
 
 ### members.csv
 
 ```
-회원명,연락처,벌금,초과횟수,대여도서관리번호목록
-김철수,010-2222-2222,0,1,B0003;B0005
+회원명,연락처,벌금,초과횟수
+김철수,010-2222-2222,0,1
 ```
 
-대여 도서 목록은 관리번호를 `;` 로 잇는다. 쉼표는 필드 구분자라 쓸 수 없다.
+`books.csv` 와 마찬가지로 머리글 줄은 없다.
+
+### 대여 관계를 저장하지 않는 이유 (정규화)
+
+"김철수가 B0005를 빌렸다"는 사실은 `books.csv` 의 **`대여회원명` 칸 한 곳에만** 적는다. 회원 쪽에는 저장하지 않는다.
+
+만약 `members.csv` 에도 `B0003;B0005` 같은 목록을 두면 같은 사실이 두 곳에 적히고, 한쪽만 바뀌면 즉시 모순이 생긴다. 관계형 DB의 **정규화**와 같은 원칙이다.
+
+대신 파일을 읽을 때 대여 관계를 조립한다.
+
+```java
+List<Book> allBooks = Stream.concat(books.stream(), disposedBooks.stream()).toList();
+for (Member member : members) {
+    allBooks.stream()
+            .filter(Book::isRented)
+            .filter(book -> book.getRenterName().equals(member.getName()))
+            .forEach(member::addRentedBook);
+}
+```
+
+폐기 도서도 회원이 들고 있을 수 있으므로 두 목록을 합쳐서 살펴본다.
+
+이 방식은 **회원명이 사실상 식별자**가 되므로 동명이인을 지원하지 않는다. 다만 `findMember(name)` 도 이미 이름으로 회원을 찾으므로 새로 생긴 제약은 아니다.
 
 ### disposed_books.csv 가 따로 있는 이유
 
@@ -228,7 +256,7 @@ Collectors.toMap(Book::getIsbn, book -> book, (first, second) -> first, LinkedHa
 | "반납일"의 두 가지 의미 | 필드는 **실제 반납일**, 반납 예정일은 계산 | 필드 목록에서 `반납완료상태` 바로 뒤에 있어 실제 반납일로 읽힌다. "반납일 이틀 전"의 반납일은 `대여일 + 7일` |
 | 인기/비인기 기준 | 상위·하위 **5권** | 명세에 개수가 없어 임의 지정 |
 | 상습 미반납 기준 | 초과 **3회 이상** | 대여 금지 기준과 같은 값 사용 |
-| 관리 고유번호 | `B0001` 순번 | "임의로 부여, 중복 불가" 요구를 만족하는 가장 단순한 방식 |
+| 관리 고유번호 | `int` 순번, 화면에는 `%04d` | 순번이므로 값은 정수로 두고, 자릿수 채움은 출력할 때만 입힌다 |
 | 대여할 책 선택 | 같은 ISBN 중 대여 가능한 첫 권 | 이용자가 관리번호를 알 필요 없게 |
 | 저장 시점 | 데이터가 바뀔 때마다 즉시 | "저장/갱신되어야 합니다" |
 

@@ -39,15 +39,11 @@ public class Library {
 	/**
 	 * 다음 관리 고유번호를 만든다. 폐기 도서 번호까지 살펴서 재사용되지 않게 한다.
 	 */
-	private String nextManagementNo() {
-		int maxNo = Stream.concat(this.books.stream(), this.disposedBooks.stream())
-				.map(Book::getManagementNo)
-				.map(managementNo -> managementNo.substring(1)) // "B0007" -> "0007"
-				.mapToInt(Integer::parseInt)
-				.max()
-				.orElse(0);
-
-		return String.format("B%04d", maxNo + 1);
+	private int nextManagementNo() {
+		return Stream.concat(this.books.stream(), this.disposedBooks.stream()) // Stream<Book>
+				.mapToInt(Book::getManagementNo) //                                 IntStream
+				.max() //                                                           OptionalInt
+				.orElse(0) + 1; //                                                  int
 	}
 
 	// ------------------------------------------------------------------
@@ -64,15 +60,15 @@ public class Library {
 	 */
 	public List<Book> disposeOldBooks(LocalDate today) {
 
-		List<Book> targets = this.books.stream()
-				.filter(book -> book.isDisposalTarget(today))
-				.toList();
+		List<Book> targets = this.books.stream() //           Stream<Book>
+				.filter(book -> book.isDisposalTarget(today)) // Stream<Book>
+				.toList(); //                                   List<Book>
 
 		this.books.removeAll(targets);
 
 		// 아직 대여 중인 폐기 도서는 회원 쪽에서 참조하므로 따로 보관한다.
-		targets.stream()
-				.filter(Book::isRented)
+		targets.stream() //             Stream<Book>
+				.filter(Book::isRented) // Stream<Book>
 				.forEach(this.disposedBooks::add);
 
 		return targets;
@@ -90,11 +86,11 @@ public class Library {
 	 * 폐기 도서와 정상 도서를 함께 대여 중이라면 조회된다.
 	 */
 	public List<Member> findDueOrOverdueMembers(LocalDate today) {
-		return this.members.stream()
-				.filter(member -> member.getRentedBooks().stream()
-						.filter(book -> !this.disposedBooks.contains(book))
-						.anyMatch(book -> book.isDueSoon(today) || book.isOverdue(today)))
-				.toList();
+		return this.members.stream() //                             Stream<Member>
+				.filter(member -> member.getRentedBooks().stream() // Stream<Book>
+						.anyMatch(book -> !this.disposedBooks.contains(book)
+								&& (book.isDueSoon(today) || book.isOverdue(today)))) // boolean
+				.toList(); //                                        List<Member>
 	}
 
 	// ------------------------------------------------------------------
@@ -103,18 +99,18 @@ public class Library {
 
 	/** 총 대여횟수가 많은 순 상위 몇 권 */
 	public List<Book> findPopularBooks(int limit) {
-		return this.books.stream()
-				.sorted(Comparator.comparingInt(Book::getRentalCount).reversed())
-				.limit(limit)
-				.toList();
+		return this.books.stream() //                                            Stream<Book>
+				.sorted(Comparator.comparingInt(Book::getRentalCount).reversed()) // Stream<Book>
+				.limit(limit) //                                                    Stream<Book>
+				.toList(); //                                                       List<Book>
 	}
 
 	/** 총 대여횟수가 적은 순 하위 몇 권 */
 	public List<Book> findUnpopularBooks(int limit) {
-		return this.books.stream()
-				.sorted(Comparator.comparingInt(Book::getRentalCount))
-				.limit(limit)
-				.toList();
+		return this.books.stream() //                                 Stream<Book>
+				.sorted(Comparator.comparingInt(Book::getRentalCount)) // Stream<Book>
+				.limit(limit) //                                         Stream<Book>
+				.toList(); //                                            List<Book>
 	}
 
 	// ------------------------------------------------------------------
@@ -122,9 +118,9 @@ public class Library {
 	// ------------------------------------------------------------------
 
 	public List<Member> findHabitualOverdueMembers() {
-		return this.members.stream()
-				.filter(Member::isHabitualOverdue)
-				.toList();
+		return this.members.stream() //          Stream<Member>
+				.filter(Member::isHabitualOverdue) // Stream<Member>
+				.toList(); //                        List<Member>
 	}
 
 	// ------------------------------------------------------------------
@@ -140,7 +136,7 @@ public class Library {
 	 */
 	public List<Book> searchBooks(int type, String keyword) {
 
-		Stream<Book> matched = this.books.stream().filter(book -> {
+		Stream<Book> matched = this.books.stream().filter(book -> { // Stream<Book>
 			if (type == 1) {
 				return book.getPublisher().contains(keyword);
 			} else if (type == 2) {
@@ -153,8 +149,9 @@ public class Library {
 		// ISBN을 키로 모으면 같은 책은 자연히 하나만 남는다.
 		// 충돌 시 먼저 나온 책을 유지하고, LinkedHashMap으로 순서를 지킨다.
 		return new ArrayList<>(matched
-				.collect(Collectors.toMap(Book::getIsbn, book -> book, (existing, duplicate) -> existing, LinkedHashMap::new))
-				.values());
+				.collect(Collectors.toMap(Book::getIsbn, book -> book, (existing, duplicate) -> existing,
+						LinkedHashMap::new)) //  LinkedHashMap<String, Book>
+				.values()); //                   Collection<Book> -> ArrayList<Book>
 	}
 
 	// ------------------------------------------------------------------
@@ -172,11 +169,10 @@ public class Library {
 			throw new LibraryException(memberName + " 회원은 반납기간 초과가 " + member.getOverdueCount() + "회이므로 대여할 수 없습니다.");
 		}
 
-		Book book = this.books.stream()
-				.filter(candidate -> candidate.getIsbn().equals(isbn))
-				.filter(candidate -> !candidate.isRented())
-				.findFirst()
-				.orElseThrow(() -> new LibraryException("대여 가능한 도서가 없습니다. (ISBN " + isbn + ")"));
+		Book book = this.books.stream() //                                              Stream<Book>
+				.filter(candidate -> candidate.getIsbn().equals(isbn) && !candidate.isRented()) // Stream<Book>
+				.findFirst() //                                                                   Optional<Book>
+				.orElseThrow(() -> new LibraryException("대여 가능한 도서가 없습니다. (ISBN " + isbn + ")")); // Book
 
 		book.rentTo(member.getName(), today);
 		member.addRentedBook(book);
@@ -195,13 +191,14 @@ public class Library {
 	 *
 	 * @return 이번에 부과된 벌금. 없으면 0
 	 */
-	public int returnBook(String memberName, String managementNo, LocalDate today) {
+	public int returnBook(String memberName, int managementNo, LocalDate today) {
 
 		Member member = this.findMember(memberName);
 
 		Book book = member.findRentedBook(managementNo);
 		if (book == null) {
-			throw new LibraryException(memberName + " 회원이 대여 중인 도서가 아닙니다. (관리번호 " + managementNo + ")");
+			throw new LibraryException(
+					String.format("%s 회원이 대여 중인 도서가 아닙니다. (관리번호 %04d)", memberName, managementNo));
 		}
 
 		boolean disposed = this.disposedBooks.contains(book);
@@ -227,10 +224,10 @@ public class Library {
 	// ------------------------------------------------------------------
 
 	public Member findMember(String name) {
-		return this.members.stream()
-				.filter(member -> member.getName().equals(name))
-				.findFirst()
-				.orElseThrow(() -> new LibraryException("존재하지 않는 회원입니다. (" + name + ")"));
+		return this.members.stream() //                       Stream<Member>
+				.filter(member -> member.getName().equals(name)) // Stream<Member>
+				.findFirst() //                                    Optional<Member>
+				.orElseThrow(() -> new LibraryException("존재하지 않는 회원입니다. (" + name + ")")); // Member
 	}
 
 	public void addMember(Member member) {
