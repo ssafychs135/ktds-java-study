@@ -13,38 +13,16 @@ public class Article extends BoardItem {
 
 	private String title;
 	private int hit;
-	private List<Comment> comments;
+	private final List<Comment> comments;
 
 	public Article(String title, String contents, String writer, String date) {
 		super(contents, writer, date);
 		this.title = title;
 		this.hit = 0; // 조회 수는 항상 0에서 시작한다.
-		this.comments = new ArrayList<Comment>(); // 밖에서 받지 않고 직접 만들어 null이 될 수 없게 한다.
+		this.comments = new ArrayList<>(); // 밖에서 받지 않고 직접 만들어 null이 될 수 없게 한다.
 	}
 
-	public String getTitle() {
-		return title;
-	}
-
-	public void setTitle(String title) {
-		this.title = title;
-	}
-
-	public int getHit() {
-		return hit;
-	}
-
-	public void increaseHit() {
-		this.hit++;
-	}
-
-	public List<Comment> getComments() {
-		return comments;
-	}
-
-	public int getCommentCount() {
-		return comments.size();
-	}
+	
 
 	public boolean isCommentFull() {
 		return comments.size() >= MAX_COMMENT_COUNT;

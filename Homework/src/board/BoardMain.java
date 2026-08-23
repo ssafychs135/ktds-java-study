@@ -57,66 +57,42 @@ public class BoardMain {
 	 */
 	private static void runMenu(BoardService boardService, int menuNo) {
 
-		switch (menuNo) {
-		case 1:
+		if (menuNo == 1) {
 			boardService.writeArticle();
-			break;
-
-		case 2:
+		} else if (menuNo == 2) {
 			boardService.printAllArticles();
-			break;
-
-		case 3:
+		} else if (menuNo == 3) {
 			boardService.printArticle(inputArticleNo());
-			break;
 
-		case 4:
+		} else if (menuNo == 4) {
 			boardService.modifyArticle(inputArticleNo());
-			break;
-
-		case 5:
+		} else if (menuNo == 5) {
 			boardService.removeArticle(inputArticleNo());
-			break;
-
-		case 6:
+		} else if (menuNo == 6) {
 			boardService.printArticleCount();
-			break;
-
-		case 7:
+		} else if (menuNo == 7) {
 			boardService.writeComment(inputArticleNo());
-			break;
-
-		case 8: {
+		} else if (menuNo == 8) {
 			int articleNo = inputArticleNo();
 			int commentNo = inputCommentNo();
 			boardService.removeComment(articleNo, commentNo);
-			break;
-		}
-
-		case 9: {
+		} else if (menuNo == 9) {
 			int articleNo = inputArticleNo();
 			int commentNo = inputCommentNo();
 			boardService.recommendComment(articleNo, commentNo);
-			break;
-		}
-
-		case 10:
+		} else if (menuNo == 10) {
 			boardService.searchByTitle(ScannerUtil.nextLine("검색어 : "));
-			break;
-
-		case 11:
+		} else if (menuNo == 11) {
 			boardService.removeAllArticles();
-			break;
-
-		case 12:
+		} else if (menuNo == 12) {
 			boardService.removeAllComments(inputArticleNo());
-			break;
 
-		default:
+		} else {
 			// 숫자가 아닌 값을 입력하면 ScannerUtil이 -1을 돌려주므로 이 경우도 여기서 걸린다.
 			System.out.println("잘못된 입력입니다. 게시글 목록으로 돌아갑니다.");
-			break;
+			
 		}
+
 	}
 
 	private static int inputArticleNo() {

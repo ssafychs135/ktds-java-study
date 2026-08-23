@@ -43,19 +43,19 @@ public class BroadcastMain {
 
 	public static void main(String[] args) {
 
-		Scanner sc = new Scanner(System.in);
+		Scanner scanner = new Scanner(System.in);
 
 		while (true) {
 			System.out.print("시각을 입력하세요 (HH:mm, 그냥 Enter 시 종료) : ");
 
 			// 입력 스트림이 끝난 경우. 검사하지 않으면 nextLine()이 예외를 던진다.
-			if (!sc.hasNextLine()) {
+			if (!scanner.hasNextLine()) {
 				System.out.println();
 				System.out.println("프로그램을 종료합니다.");
 				break;
 			}
 
-			String input = sc.nextLine().trim();
+			String input = scanner.nextLine().trim();
 
 			// 아무것도 입력하지 않으면 종료한다.
 			if (input.isEmpty()) {
@@ -66,7 +66,7 @@ public class BroadcastMain {
 			try {
 				LocalTime time = LocalTime.parse(input, TIME_FORMAT);
 				System.out.println(findProgramName(time));
-			} catch (DateTimeParseException e) {
+			} catch (DateTimeParseException exception) {
 				// 형식이 어긋나거나 25:99 처럼 존재하지 않는 시각인 경우
 				System.out.println("시각 형식이 잘못되었습니다. 예) 10:34");
 			}
@@ -74,7 +74,7 @@ public class BroadcastMain {
 			System.out.println();
 		}
 
-		sc.close();
+		scanner.close();
 	}
 
 	/**

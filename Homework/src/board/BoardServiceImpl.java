@@ -1,10 +1,9 @@
 package board;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import board.utils.ScannerUtil;
 import board.utils.ValidationUtil;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 개시판 기능의 세부 구현
@@ -13,7 +12,7 @@ public class BoardServiceImpl implements BoardService {
 
 	private static final String LINE = "--------------------------------------------------";
 
-	private List<Article> articleList = new ArrayList<Article>();
+	private final List<Article> articleList = new ArrayList<>();
 
 	// 1. 게시글 작성하기
 	@Override

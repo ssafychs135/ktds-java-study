@@ -7,7 +7,11 @@ import java.util.Scanner;
  */
 public class ScannerUtil {
 
-	private static Scanner sc = new Scanner(System.in);
+	private final static Scanner sc;
+
+	static {
+		sc = new Scanner(System.in);
+	}
 
 	// 객체를 만들 필요가 없는 유틸리티 클래스이므로 생성자를 막아둔다.
 	private ScannerUtil() {
@@ -22,8 +26,7 @@ public class ScannerUtil {
 	}
 
 	/**
-	 * 안내 문구를 출력하고 정수를 입력받는다.
-	 * 잘못된 값을 입력하면 -1을 반환하여 오류 핸들링
+	 * 안내 문구를 출력하고 정수를 입력받는다. 잘못된 값을 입력하면 -1을 반환하여 오류 핸들링
 	 */
 	public static int nextInt(String prompt) {
 		System.out.print(prompt);
